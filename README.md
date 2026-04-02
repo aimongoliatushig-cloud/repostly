@@ -7,6 +7,40 @@
 
 ---
 
+## Development Setup
+
+1. Install dependencies
+
+```bash
+npm install
+```
+
+2. Create the local environment file
+
+```bash
+cp .env.example .env.local
+```
+
+3. Fill these values in `.env.local`
+
+```bash
+OPENAI_API_KEY=
+HEYGEN_API_KEY=
+SUPABASE_URL=
+SUPABASE_ANON_KEY=
+```
+
+4. Start the app
+
+```bash
+npm run dev
+```
+
+5. Check starter endpoints
+
+* `/api/health`
+* `/api/pipeline`
+
 ## 🚀 MVP Goal
 
 1 товч → бэлэн видео
