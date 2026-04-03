@@ -5,6 +5,7 @@
 ## Юу бэлэн болсон бэ
 
 - Supabase core schema, RLS, credit deduction function
+- Supabase SSR client helpers болон session refresh proxy
 - OpenAI + KIE.ai урсгалд таарсан API contract route-ууд
 - Монгол UI-тэй mobile-first page scaffold
 - Subscription plan, doctor system, brand settings, scene card workflow
@@ -56,7 +57,7 @@ Core migration:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 OPENAI_API_KEY=
 OPENAI_MODEL_SCRIPT=gpt-4.1-mini
@@ -64,6 +65,13 @@ KIE_API_KEY=
 KIE_API_BASE_URL=https://api.kie.ai
 KIE_CALLBACK_SECRET=
 ```
+
+Supabase SSR helper файлууд:
+
+- `src/utils/supabase/client.ts`
+- `src/utils/supabase/server.ts`
+- `src/utils/supabase/middleware.ts`
+- `src/proxy.ts`
 
 ## Ажиллуулах
 

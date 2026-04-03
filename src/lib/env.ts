@@ -20,8 +20,8 @@ const integrations = [
     hint: "Auth, database, storage connection.",
   },
   {
-    key: "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    label: "Supabase anon key",
+    key: "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY",
+    label: "Supabase publishable key",
     hint: "Client-side auth session болон public access.",
   },
   {
@@ -50,4 +50,16 @@ export function getMissingIntegrationKeys() {
   return getIntegrationStatuses()
     .filter((integration) => !integration.configured)
     .map((integration) => integration.key);
+}
+
+export function getSupabasePublishableKey() {
+  return (
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  );
+}
+
+export function hasSupabaseBrowserEnv() {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && getSupabasePublishableKey());
 }

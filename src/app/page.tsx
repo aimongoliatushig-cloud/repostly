@@ -13,10 +13,21 @@ import {
   subscriptionPlans,
   uiPages,
 } from "@/lib/postly-data";
-import { getIntegrationStatuses } from "@/lib/env";
+import { getIntegrationStatuses, hasSupabaseBrowserEnv } from "@/lib/env";
+import { createClient } from "@/utils/supabase/server";
 
-export default function Home() {
+export default async function Home() {
   const integrations = getIntegrationStatuses();
+  let signedInLabel = "Supabase холболт хүлээгдэж байна";
+
+  if (hasSupabaseBrowserEnv()) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+
+    signedInLabel = user?.email ?? "Идэвхтэй session алга";
+  }
 
   return (
     <PostlyShell
@@ -43,6 +54,11 @@ export default function Home() {
             <p className="metric-helper">{metric.helper}</p>
           </article>
         ))}
+        <article className="metric-card">
+          <p className="eyebrow">Supabase SSR</p>
+          <p className="metric-value">Live</p>
+          <p className="metric-helper">{signedInLabel}</p>
+        </article>
       </section>
 
       <SectionCard
