@@ -1,24 +1,24 @@
 import type { Metadata } from "next";
-import { Fraunces, Manrope } from "next/font/google";
+import { Bitter, Rubik } from "next/font/google";
 
 import "./globals.css";
 
-const headingFont = Fraunces({
+const headingFont = Bitter({
   variable: "--font-heading",
-  subsets: ["latin"],
+  subsets: ["latin", "cyrillic"],
   display: "swap",
 });
 
-const bodyFont = Manrope({
+const bodyFont = Rubik({
   variable: "--font-body",
-  subsets: ["latin"],
+  subsets: ["latin", "cyrillic"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
-  title: "Postly.mn | Agentic Healthcare Video System",
+  title: "Postly AI | Эмнэлгийн AI видео платформ",
   description:
-    "Healthcare video generation control room for doctor image, audio, transcription, analysis, and delivery.",
+    "Эмнэлэг, клиник, агентуудад зориулсан Монгол хэл дээрх AI видео үйлдвэрлэлийн SaaS платформ.",
 };
 
 export default function RootLayout({
@@ -28,10 +28,10 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="mn"
       className={`${headingFont.variable} ${bodyFont.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body>{children}</body>
     </html>
   );
 }

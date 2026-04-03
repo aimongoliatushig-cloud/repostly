@@ -2,22 +2,32 @@ const integrations = [
   {
     key: "OPENAI_API_KEY",
     label: "OpenAI",
-    hint: "Used for transcription and script analysis.",
+    hint: "Topic, hook, script, storyboard болон animation plan гаргана.",
   },
   {
-    key: "HEYGEN_API_KEY",
-    label: "HeyGen",
-    hint: "Used for lip-sync video generation.",
+    key: "KIE_API_KEY",
+    label: "KIE.ai",
+    hint: "Scene clip, voice, seed continuity-тэй генерац хийнэ.",
   },
   {
-    key: "SUPABASE_URL",
+    key: "KIE_API_BASE_URL",
+    label: "KIE API URL",
+    hint: "Official jobs endpoint-уудын base URL.",
+  },
+  {
+    key: "NEXT_PUBLIC_SUPABASE_URL",
     label: "Supabase URL",
-    hint: "Used for storage, uploads, and workflow state.",
+    hint: "Auth, database, storage connection.",
   },
   {
-    key: "SUPABASE_ANON_KEY",
+    key: "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     label: "Supabase anon key",
-    hint: "Used for browser-safe client access.",
+    hint: "Client-side auth session болон public access.",
+  },
+  {
+    key: "SUPABASE_SERVICE_ROLE_KEY",
+    label: "Supabase service role",
+    hint: "Queue worker, credit ledger, secure server write.",
   },
 ] as const;
 
@@ -25,6 +35,7 @@ export type IntegrationKey = (typeof integrations)[number]["key"];
 
 function getEnvValue(key: IntegrationKey) {
   const value = process.env[key];
+
   return value && value.trim().length > 0 ? value : undefined;
 }
 
