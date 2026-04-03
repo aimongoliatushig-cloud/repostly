@@ -1,53 +1,73 @@
 import Link from "next/link";
 
+import { FeedbackBanner } from "@/components/feedback-banner";
 import { PostlyShell } from "@/components/postly-shell";
 import { SectionCard } from "@/components/section-card";
 
-export default function AuthPage() {
+type AuthPageProps = {
+  searchParams: Promise<{
+    error?: string;
+    message?: string;
+    next?: string;
+  }>;
+};
+
+export default async function AuthPage({ searchParams }: AuthPageProps) {
+  const params = await searchParams;
+  const nextPath = params.next || "/dashboard";
+
   return (
     <PostlyShell
       activePath="/auth"
       eyebrow="Нэвтрэлт"
       title="Брэнд суурьтай нэвтрэлт ба бүртгэл"
-      description="Admin, brand, agent гэсэн 3 төрлийн role-ийг Supabase Auth дээр суурилан удирдах auth experience."
+      description="Admin, brand, agent хэрэглэгчид Supabase Auth дээр суурилан нэвтэрч, өөрийн брэнд context-оо автоматаар авна."
       actions={
         <>
-          <Link href="/dashboard" className="button-primary">
-            Демо самбар руу
+          <Link href="/" className="button-secondary">
+            Нүүр хуудас
           </Link>
-          <Link href="/" className="button-ghost">
-            Архитектур руу буцах
-          </Link>
+          <a href="#register-form" className="button-primary">
+            Шинээр бүртгүүлэх
+          </a>
         </>
       }
     >
+      {params.error ? <FeedbackBanner tone="error" message={params.error} /> : null}
+      {params.message ? (
+        <FeedbackBanner tone="success" message={params.message} />
+      ) : null}
+
       <section className="grid-2">
         <SectionCard
           title="Нэвтрэх"
-          description="Brand эсвэл agent хэрэглэгч default brand context-тайгаа session авна."
+          description="Идэвхтэй хэрэглэгч имэйл, нууц үгээрээ орж dashboard руу үргэлжилнэ."
         >
-          <form className="field-grid">
+          <form className="field-grid" method="post" action="/api/auth/login">
+            <input type="hidden" name="next" value={nextPath} />
             <label>
-              <span className="field-label">Имэйл эсвэл утас</span>
-              <input className="field" placeholder="clinic@postly.mn" />
+              <span className="field-label">Имэйл</span>
+              <input
+                className="field"
+                name="emailOrPhone"
+                type="email"
+                placeholder="clinic@postly.mn"
+                required
+              />
             </label>
             <label>
               <span className="field-label">Нууц үг</span>
-              <input className="field" type="password" placeholder="••••••••" />
-            </label>
-            <label>
-              <span className="field-label">Идэвхтэй брэнд</span>
-              <select className="select" defaultValue="sergeen">
-                <option value="sergeen">Сэргээн Клиник</option>
-                <option value="enerel">Энэрэл эмнэлэг</option>
-              </select>
+              <input
+                className="field"
+                name="password"
+                type="password"
+                placeholder="••••••••"
+                required
+              />
             </label>
             <div className="action-row">
-              <button type="button" className="button-primary">
+              <button type="submit" className="button-primary">
                 Нэвтрэх
-              </button>
-              <button type="button" className="button-ghost">
-                Нууц үг сэргээх
               </button>
             </div>
           </form>
@@ -55,31 +75,52 @@ export default function AuthPage() {
 
         <SectionCard
           title="Бүртгүүлэх"
-          description="Шинэ brand account үүсэхэд initial membership ба subscription scaffold автоматаар бэлтгэгдэнэ."
+          description="Шинэ брэнд үүсэхэд анхны багц, membership, subscription context автоматаар үүснэ."
         >
-          <form className="field-grid">
+          <form
+            id="register-form"
+            className="field-grid"
+            method="post"
+            action="/api/auth/register"
+          >
+            <input type="hidden" name="next" value={nextPath} />
             <label>
               <span className="field-label">Брэндийн нэр</span>
-              <input className="field" placeholder="Сэргээн Клиник" />
+              <input
+                className="field"
+                name="brandName"
+                placeholder="Сэргээн Клиник"
+                required
+              />
             </label>
             <label>
               <span className="field-label">Холбоо барих утас</span>
-              <input className="field" placeholder="7707-1100" />
+              <input className="field" name="phone" placeholder="7707-1100" />
             </label>
             <label>
               <span className="field-label">Имэйл</span>
-              <input className="field" placeholder="marketing@clinic.mn" />
+              <input
+                className="field"
+                name="email"
+                type="email"
+                placeholder="marketing@clinic.mn"
+                required
+              />
             </label>
             <label>
               <span className="field-label">Нууц үг</span>
-              <input className="field" type="password" placeholder="Хамгийн багадаа 8 тэмдэгт" />
+              <input
+                className="field"
+                name="password"
+                type="password"
+                minLength={8}
+                placeholder="Хамгийн багадаа 8 тэмдэгт"
+                required
+              />
             </label>
             <div className="action-row">
-              <button type="button" className="button-primary">
+              <button type="submit" className="button-primary">
                 Бүртгэл үүсгэх
-              </button>
-              <button type="button" className="button-secondary">
-                Агент урилга илгээх
               </button>
             </div>
           </form>
@@ -94,19 +135,22 @@ export default function AuthPage() {
           <article className="mini-card stack-sm">
             <strong>Admin</strong>
             <p className="muted-text">
-              Бүх брэнд, эмчийн сан, plan, credit adjustment, queue visibility бүрэн нээлттэй.
+              Бүх брэнд, эмчийн сан, багц, кредитийн хөдөлгөөн, queue төлөвийг
+              бүхэлд нь удирдана.
             </p>
           </article>
           <article className="mini-card stack-sm">
             <strong>Brand</strong>
             <p className="muted-text">
-              Өөрийн эмч, brand settings, видео төсөл, download, billing summary-г удирдана.
+              Өөрийн брэндийн эмч, asset, төсөл, storyboard, final download-г
+              удирдана.
             </p>
           </article>
           <article className="mini-card stack-sm">
             <strong>Agent</strong>
             <p className="muted-text">
-              Brand-тай ижил studio access авч, контент үйлдвэрлэл хийдэг ч ихэнхдээ billing edit хийхгүй.
+              Brand-тай ижил үйлдвэрлэлийн access авч, контент урсгалыг
+              ажиллуулна.
             </p>
           </article>
         </div>

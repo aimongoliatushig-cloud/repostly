@@ -26,29 +26,29 @@ export const primaryNavigation: PageLink[] = [
     description: "Кредит, queue, төслүүд.",
   },
   {
-    href: "/videos/new/broll",
+    href: "/dashboard/broll",
     label: "B-roll студи",
     description: "Эмч + MP3 урсгал.",
   },
   {
-    href: "/videos/new/organ-talk",
+    href: "/dashboard/organ",
     label: "Орган студи",
     description: "Avatar тайлбарлагч урсгал.",
   },
   {
-    href: "/admin/doctors",
+    href: "/dashboard/doctors",
     label: "Эмчийн сан",
     description: "Админ эмчийн удирдлага.",
   },
   {
-    href: "/settings/brand",
+    href: "/dashboard/settings",
     label: "Брэнд тохиргоо",
     description: "Лого, frame, outro.",
   },
   {
-    href: "/subscriptions",
-    label: "Багц ба кредит",
-    description: "Үнэ, үлдэгдэл, лог.",
+    href: "/dashboard/projects",
+    label: "Төслүүд",
+    description: "B-roll, Organ talk төслүүд.",
   },
   {
     href: "/auth",
@@ -679,28 +679,28 @@ export const uiPages = [
   },
   {
     title: "B-roll студи",
-    path: "/videos/new/broll",
+    path: "/dashboard/broll",
     purpose: "Doctor + MP3 суурьтай reel builder.",
   },
   {
     title: "Organ студи",
-    path: "/videos/new/organ-talk",
+    path: "/dashboard/organ",
     purpose: "Avatar, seed continuity, 5 scene builder.",
   },
   {
     title: "Эмчийн сан",
-    path: "/admin/doctors",
+    path: "/dashboard/doctors",
     purpose: "Admin doctor CRUD болон specialization management.",
   },
   {
     title: "Брэнд тохиргоо",
-    path: "/settings/brand",
+    path: "/dashboard/settings",
     purpose: "Logo, frame, outro, холбоо барих мэдээлэл.",
   },
   {
-    title: "Багц ба кредит",
-    path: "/subscriptions",
-    purpose: "Үнэ, current plan, credit ledger.",
+    title: "Төслүүд",
+    path: "/dashboard/projects",
+    purpose: "B-roll, Organ talk төслүүдийн жагсаалт ба workflow detail.",
   },
 ];
 

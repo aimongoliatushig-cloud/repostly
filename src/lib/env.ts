@@ -63,3 +63,31 @@ export function getSupabasePublishableKey() {
 export function hasSupabaseBrowserEnv() {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && getSupabasePublishableKey());
 }
+
+export function getOpenAiApiKey() {
+  return process.env.OPENAI_API_KEY?.trim();
+}
+
+export function getOpenAiModel() {
+  return process.env.OPENAI_MODEL_SCRIPT?.trim() || "gpt-4.1-mini";
+}
+
+export function hasOpenAiEnv() {
+  return Boolean(getOpenAiApiKey());
+}
+
+export function getKieApiKey() {
+  return process.env.KIE_API_KEY?.trim();
+}
+
+export function getKieApiBaseUrl() {
+  return process.env.KIE_API_BASE_URL?.trim() || "https://api.kie.ai";
+}
+
+export function getKieCallbackSecret() {
+  return process.env.KIE_CALLBACK_SECRET?.trim();
+}
+
+export function hasKieEnv() {
+  return Boolean(getKieApiKey());
+}

@@ -1,77 +1,63 @@
 # Postly AI
 
-Монгол хэл дээр ажиллах, эмнэлэг болон агентуудад зориулсан AI видео үйлдвэрлэлийн SaaS scaffold.
+Монгол хэл дээр ажиллах, эмнэлэг болон агентуудад зориулсан AI reel production SaaS.
 
-## Юу бэлэн болсон бэ
+## Одоо бодитоор ажиллаж буй зүйлс
 
-- Supabase core schema, RLS, credit deduction function
-- Supabase SSR client helpers болон session refresh proxy
-- OpenAI + KIE.ai урсгалд таарсан API contract route-ууд
-- Монгол UI-тэй mobile-first page scaffold
-- Subscription plan, doctor system, brand settings, scene card workflow
+- Supabase core schema, RLS, credit deduction function, brand bootstrap function
+- Supabase SSR auth, protected routing, current brand context resolution
+- Dashboard, doctors, brand settings, projects, B-roll, Organ Talk protected pages
+- Real doctors CRUD, brand settings persistence, storage upload flow
+- Real project draft creation, storyboard planning, scene editing, per-scene generation jobs
+- KIE polling + callback wiring
+- FFmpeg дээр суурилсан final merge pipeline
 
-## Хуудаснууд
+## Гол route-ууд
 
-- `/`
 - `/auth`
 - `/dashboard`
-- `/videos/new/broll`
-- `/videos/new/organ-talk`
+- `/dashboard/broll`
+- `/dashboard/organ`
+- `/dashboard/doctors`
+- `/dashboard/settings`
+- `/dashboard/projects`
+- `/dashboard/projects/[projectId]`
+
+Legacy scaffold route-ууд redirect хийнэ:
+
 - `/admin/doctors`
 - `/settings/brand`
-- `/subscriptions`
+- `/videos/new/broll`
+- `/videos/new/organ-talk`
 
-## API route-ууд
-
-- `/api/health`
-- `/api/pipeline`
-- `/api/auth/login`
-- `/api/auth/register`
-- `/api/plans`
-- `/api/organ-avatars`
-- `/api/doctors`
-- `/api/brand/settings`
-- `/api/projects`
-- `/api/projects/[projectId]/storyboard`
-- `/api/projects/[projectId]/generate`
-- `/api/jobs/[jobId]`
-
-## Supabase migration
-
-Core migration:
+## Supabase migration-ууд
 
 - `supabase/migrations/20260403194000_postly_core.sql`
-
-Агуулга:
-
-- `profiles`, `brands`, `brand_memberships`
-- `subscription_plans`, `brand_subscriptions`, `credit_ledger`
-- `doctors`, `organ_avatars`, `brand_assets`
-- `video_projects`, `project_scenes`, `generation_jobs`
-- `consume_video_credit()` функц
-- Row Level Security policies
+- `supabase/migrations/20260403223000_postly_bootstrap_and_storage.sql`
+- `supabase/migrations/20260403234500_postly_kie_callback.sql`
 
 ## Environment variables
 
-`.env.local` файлд:
+`.env.local` файлд дор хаяж:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+APP_URL=http://localhost:3000
 OPENAI_API_KEY=
 OPENAI_MODEL_SCRIPT=gpt-4.1-mini
 KIE_API_KEY=
 KIE_API_BASE_URL=https://api.kie.ai
 KIE_CALLBACK_SECRET=
+SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-Supabase SSR helper файлууд:
+Тайлбар:
 
-- `src/utils/supabase/client.ts`
-- `src/utils/supabase/server.ts`
-- `src/utils/supabase/middleware.ts`
-- `src/proxy.ts`
+- `OPENAI_API_KEY` байхгүй бол storyboard planning template fallback руу орно.
+- `KIE_API_KEY` байхгүй бол scene generation failed state-ээр бууна, mock success хийхгүй.
+- `APP_URL` нь KIE callback URL үүсгэхэд хэрэглэгдэнэ.
+- `SUPABASE_SERVICE_ROLE_KEY` одоогийн кодын үндсэн урсгалд заавал биш, гэхдээ цаашдын worker/background automation-д ашигтай.
 
 ## Ажиллуулах
 
@@ -80,7 +66,7 @@ npm install
 npm run dev
 ```
 
-Шалгах командууд:
+Шалгах:
 
 ```bash
 npm run lint
@@ -88,10 +74,8 @@ npm run typecheck
 npm run build
 ```
 
-## Дараагийн хэрэгжилт
+## Нэмэлт note
 
-1. Supabase auth callback болон session management
-2. Storage upload flow
-3. OpenAI planning endpoint-уудын бодит integration
-4. KIE.ai async job create/status/callback integration
-5. FFmpeg merge worker
+- Scene clip generation нь KIE Runway endpoint дээр суурилсан.
+- Final merge нь local `ffmpeg` ашиглана.
+- Credit deduction зөвхөн final merge амжилттай дууссаны дараа `consume_video_credit()` RPC-ээр хийгдэнэ.

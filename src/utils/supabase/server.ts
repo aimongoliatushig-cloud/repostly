@@ -2,6 +2,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 
 import { getSupabasePublishableKey } from "@/lib/env";
+import type { Database } from "@/lib/supabase/database.types";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = getSupabasePublishableKey();
@@ -11,7 +12,7 @@ export async function createClient(
 ) {
   const resolvedCookieStore = cookieStore ?? (await cookies());
 
-  return createServerClient(supabaseUrl!, supabaseKey!, {
+  return createServerClient<Database>(supabaseUrl!, supabaseKey!, {
     cookies: {
       getAll() {
         return resolvedCookieStore.getAll();
