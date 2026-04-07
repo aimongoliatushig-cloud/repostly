@@ -742,6 +742,45 @@ select {
   gap: 14px;
 }
 
+.landing-minimal {
+  min-height: 100vh;
+  padding: 20px;
+  display: grid;
+  place-items: center;
+}
+
+.landing-card {
+  width: min(100%, 460px);
+  border-radius: 32px;
+  border: 1px solid var(--line);
+  background:
+    radial-gradient(circle at top right, rgba(27, 168, 146, 0.16), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(238, 249, 247, 0.92));
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px);
+  padding: 28px;
+  display: grid;
+  gap: 22px;
+}
+
+.landing-title {
+  margin: 0;
+  font-family: var(--font-heading), serif;
+  font-size: clamp(2.1rem, 5vw, 3.4rem);
+  letter-spacing: -0.03em;
+}
+
+.landing-copy {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.8;
+}
+
+.landing-actions {
+  display: grid;
+  gap: 12px;
+}
+
 .checkbox-row {
   display: flex;
   align-items: center;
