@@ -7,6 +7,7 @@ import type {
   TableRow,
   TableUpdate,
 } from "@/lib/supabase/database.types";
+import { isMissingRelationError } from "@/lib/supabase/errors";
 import type { BrandSettingsView as HospitalBrandSettingsView } from "@/types/hospital";
 
 type SubscriptionWithPlan = TableRow<"brand_subscriptions"> & {
@@ -91,6 +92,22 @@ export async function listCreditLedger(
   return data ?? [];
 }
 
+function buildFallbackBrandSettings(brand: TableRow<"brands">) {
+  return {
+    id: brand.id,
+    hospital_name: brand.name,
+    logo_url: brand.logo_path,
+    frame_url: brand.frame_path,
+    outro_url: brand.outro_video_path,
+    phone: brand.phone,
+    website: brand.website,
+    facebook: brand.facebook_url,
+    address_mn: brand.address,
+    created_at: brand.created_at,
+    updated_at: brand.updated_at,
+  } as TableRow<"brand_settings">;
+}
+
 async function ensureBrandSettingsRow(
   supabase: SupabaseClient<Database>,
   brand: TableRow<"brands">,
@@ -102,6 +119,10 @@ async function ensureBrandSettingsRow(
     .maybeSingle();
 
   if (error) {
+    if (isMissingRelationError(error, "brand_settings")) {
+      return buildFallbackBrandSettings(brand);
+    }
+
     throw error;
   }
 
@@ -126,6 +147,10 @@ async function ensureBrandSettingsRow(
     .single();
 
   if (insertError) {
+    if (isMissingRelationError(insertError, "brand_settings")) {
+      return buildFallbackBrandSettings(brand);
+    }
+
     throw insertError;
   }
 
@@ -297,6 +322,10 @@ export async function saveBrandSettings(
     .upsert(brandSettingsUpdates);
 
   if (settingsError) {
+    if (isMissingRelationError(settingsError, "brand_settings")) {
+      return;
+    }
+
     throw settingsError;
   }
 }

@@ -7,6 +7,10 @@ import type {
   TableRow,
   TableUpdate,
 } from "@/lib/supabase/database.types";
+import {
+  isMissingColumnError,
+  isMissingRelationError,
+} from "@/lib/supabase/errors";
 import type {
   AvatarView,
   DoctorDetailView,
@@ -27,6 +31,15 @@ function getDoctorSpecialty(input: {
   specialization?: string;
 }) {
   return (input.specialtyMn ?? input.specialization ?? "").trim();
+}
+
+function normalizeDoctorRow(doctor: TableRow<"doctors">) {
+  return {
+    ...doctor,
+    name_mn: doctor.name_mn ?? doctor.full_name,
+    specialty_mn: doctor.specialty_mn ?? doctor.specialization,
+    portrait_url: doctor.portrait_url ?? doctor.image_path,
+  } satisfies TableRow<"doctors">;
 }
 
 async function signAvatarRows(
@@ -58,6 +71,10 @@ async function getDoctorAvatarsByDoctorIds(
     .order("created_at", { ascending: false });
 
   if (error) {
+    if (isMissingRelationError(error, "avatars")) {
+      return new Map<string, AvatarView[]>();
+    }
+
     throw error;
   }
 
@@ -77,13 +94,14 @@ async function mapDoctorListItems(
   supabase: SupabaseClient<Database>,
   doctors: TableRow<"doctors">[],
 ) {
+  const normalizedDoctors = doctors.map(normalizeDoctorRow);
   const [avatarMap, portraitUrls] = await Promise.all([
     getDoctorAvatarsByDoctorIds(
       supabase,
-      doctors.map((doctor) => doctor.id),
+      normalizedDoctors.map((doctor) => doctor.id),
     ),
     Promise.all(
-      doctors.map((doctor) =>
+      normalizedDoctors.map((doctor) =>
         createSignedAssetUrl(
           supabase,
           doctor.portrait_url ?? doctor.image_path ?? null,
@@ -92,7 +110,7 @@ async function mapDoctorListItems(
     ),
   ]);
 
-  return doctors.map((doctor, index) => {
+  return normalizedDoctors.map((doctor, index) => {
     const avatars = avatarMap.get(doctor.id) ?? [];
     const primaryAvatar = avatars.find((avatar) => avatar.is_primary) ?? null;
 
@@ -138,7 +156,7 @@ export async function getDoctorDetail(
     doctorId: string;
   },
 ) {
-  const { data: doctor, error } = await supabase
+  const { data: rawDoctor, error } = await supabase
     .from("doctors")
     .select("*")
     .eq("brand_id", input.brandId)
@@ -155,10 +173,11 @@ export async function getDoctorDetail(
     .eq("doctor_id", input.doctorId)
     .order("created_at", { ascending: false });
 
-  if (avatarError) {
+  if (avatarError && !isMissingRelationError(avatarError, "avatars")) {
     throw avatarError;
   }
 
+  const doctor = normalizeDoctorRow(rawDoctor);
   const [portraitSignedUrl, avatars] = await Promise.all([
     createSignedAssetUrl(
       supabase,
@@ -195,40 +214,68 @@ export async function createDoctor(
     throw new Error("Эмчийн нэр, мэргэжлийг бүрэн оруулна уу.");
   }
 
-  const doctorInsert: TableInsert<"doctors"> = {
-    brand_id: input.brandId,
-    name_mn: nameMn,
-    specialty_mn: specialtyMn,
-    full_name: nameMn,
-    specialization: specialtyMn,
-    created_by: input.userId,
-    is_active: true,
-  };
-
   const portraitFile = input.portraitFile ?? input.imageFile;
+  let portraitPath: string | null = null;
 
   if (portraitFile && portraitFile.size > 0) {
-    const portraitPath = await uploadBrandFile(
+    portraitPath = await uploadBrandFile(
       supabase,
       input.brandId,
       "doctor-image",
       portraitFile,
     );
-    doctorInsert.portrait_url = portraitPath;
-    doctorInsert.image_path = portraitPath;
   }
 
-  const { data, error } = await supabase
+  const modernInsert: TableInsert<"doctors"> = {
+    brand_id: input.brandId,
+    name_mn: nameMn,
+    specialty_mn: specialtyMn,
+    portrait_url: portraitPath,
+    full_name: nameMn,
+    specialization: specialtyMn,
+    image_path: portraitPath,
+    created_by: input.userId,
+    is_active: true,
+  };
+
+  const modernResult = await supabase
     .from("doctors")
-    .insert(doctorInsert)
+    .insert(modernInsert)
     .select("*")
     .single();
 
-  if (error) {
-    throw error;
+  if (!modernResult.error) {
+    return normalizeDoctorRow(modernResult.data);
   }
 
-  return data;
+  if (
+    !isMissingColumnError(modernResult.error, "name_mn") &&
+    !isMissingColumnError(modernResult.error, "specialty_mn") &&
+    !isMissingColumnError(modernResult.error, "portrait_url")
+  ) {
+    throw modernResult.error;
+  }
+
+  const legacyInsert: TableInsert<"doctors"> = {
+    brand_id: input.brandId,
+    full_name: nameMn,
+    specialization: specialtyMn,
+    image_path: portraitPath,
+    created_by: input.userId,
+    is_active: true,
+  };
+
+  const legacyResult = await supabase
+    .from("doctors")
+    .insert(legacyInsert)
+    .select("*")
+    .single();
+
+  if (legacyResult.error) {
+    throw legacyResult.error;
+  }
+
+  return normalizeDoctorRow(legacyResult.data);
 }
 
 export async function updateDoctor(
@@ -251,34 +298,65 @@ export async function updateDoctor(
     throw new Error("Эмчийн нэр, мэргэжлийг бүрэн оруулна уу.");
   }
 
-  const updates: TableUpdate<"doctors"> = {
+  const portraitFile = input.portraitFile ?? input.imageFile;
+  let portraitPath: string | null = null;
+
+  if (portraitFile && portraitFile.size > 0) {
+    portraitPath = await uploadBrandFile(
+      supabase,
+      input.brandId,
+      "doctor-image",
+      portraitFile,
+    );
+  }
+
+  const modernUpdates: TableUpdate<"doctors"> = {
     name_mn: nameMn,
     specialty_mn: specialtyMn,
     full_name: nameMn,
     specialization: specialtyMn,
   };
 
-  const portraitFile = input.portraitFile ?? input.imageFile;
-
-  if (portraitFile && portraitFile.size > 0) {
-    const portraitPath = await uploadBrandFile(
-      supabase,
-      input.brandId,
-      "doctor-image",
-      portraitFile,
-    );
-    updates.portrait_url = portraitPath;
-    updates.image_path = portraitPath;
+  if (portraitPath) {
+    modernUpdates.portrait_url = portraitPath;
+    modernUpdates.image_path = portraitPath;
   }
 
-  const { error } = await supabase
+  const modernResult = await supabase
     .from("doctors")
-    .update(updates)
+    .update(modernUpdates)
     .eq("id", input.doctorId)
     .eq("brand_id", input.brandId);
 
-  if (error) {
-    throw error;
+  if (!modernResult.error) {
+    return;
+  }
+
+  if (
+    !isMissingColumnError(modernResult.error, "name_mn") &&
+    !isMissingColumnError(modernResult.error, "specialty_mn") &&
+    !isMissingColumnError(modernResult.error, "portrait_url")
+  ) {
+    throw modernResult.error;
+  }
+
+  const legacyUpdates: TableUpdate<"doctors"> = {
+    full_name: nameMn,
+    specialization: specialtyMn,
+  };
+
+  if (portraitPath) {
+    legacyUpdates.image_path = portraitPath;
+  }
+
+  const legacyResult = await supabase
+    .from("doctors")
+    .update(legacyUpdates)
+    .eq("id", input.doctorId)
+    .eq("brand_id", input.brandId);
+
+  if (legacyResult.error) {
+    throw legacyResult.error;
   }
 }
 
@@ -335,6 +413,12 @@ async function getDoctorForAvatarWrite(
   return data;
 }
 
+function getAvatarDisabledError() {
+  return new Error(
+    "Avatar хүснэгт идэвхгүй байна. Одоогоор эмчийн үндсэн portrait зураг ашиглана.",
+  );
+}
+
 export async function addDoctorAvatar(
   supabase: SupabaseClient<Database>,
   input: {
@@ -359,6 +443,10 @@ export async function addDoctorAvatar(
     .eq("doctor_id", input.doctorId);
 
   if (countError) {
+    if (isMissingRelationError(countError, "avatars")) {
+      throw getAvatarDisabledError();
+    }
+
     throw countError;
   }
 
@@ -373,6 +461,10 @@ export async function addDoctorAvatar(
     .single();
 
   if (error) {
+    if (isMissingRelationError(error, "avatars")) {
+      throw getAvatarDisabledError();
+    }
+
     throw error;
   }
 
@@ -392,6 +484,10 @@ export async function setPrimaryAvatar(
     .eq("doctor_id", input.doctorId);
 
   if (clearError) {
+    if (isMissingRelationError(clearError, "avatars")) {
+      throw getAvatarDisabledError();
+    }
+
     throw clearError;
   }
 
@@ -402,6 +498,10 @@ export async function setPrimaryAvatar(
     .eq("id", input.avatarId);
 
   if (error) {
+    if (isMissingRelationError(error, "avatars")) {
+      throw getAvatarDisabledError();
+    }
+
     throw error;
   }
 }
