@@ -1,12 +1,13 @@
 import Link from "next/link";
 
+import { AssetPreview } from "@/components/asset-preview";
+import { DashboardShell } from "@/components/dashboard-shell";
 import { FeedbackBanner } from "@/components/feedback-banner";
-import { PostlyShell } from "@/components/postly-shell";
 import { SectionCard } from "@/components/section-card";
 import { requireBrandContext } from "@/lib/auth/context";
 import { getBrandSettings } from "@/lib/brands/service";
 
-import { saveBrandSettingsAction } from "../actions";
+import { saveBrandSettingsAction } from "./actions";
 
 type SettingsPageProps = {
   searchParams: Promise<{
@@ -15,26 +16,23 @@ type SettingsPageProps = {
   }>;
 };
 
-export default async function SettingsPage({ searchParams }: SettingsPageProps) {
+export default async function SettingsPage({
+  searchParams,
+}: SettingsPageProps) {
   const params = await searchParams;
   const context = await requireBrandContext("/dashboard/settings");
   const settings = await getBrandSettings(context.supabase, context.brand.id);
 
   return (
-    <PostlyShell
+    <DashboardShell
       activePath="/dashboard/settings"
-      eyebrow="Брэнд тохиргоо"
-      title="Брэндийн contact ба asset удирдлага"
-      description="Logo, frame PNG, outro video, Facebook, website, хаяг зэрэг бүх финал reel-д нөлөөлөх мэдээлэл энд хадгалагдана."
+      hospitalName={settings.settings.hospital_name}
+      title="Тохиргоо"
+      description="Эмнэлгийн нэр, холбоо барих мэдээлэл, logo, frame, outro asset-уудыг эндээс удирдана."
       actions={
-        <>
-          <Link href="/dashboard/projects" className="button-secondary">
-            Төслүүд рүү
-          </Link>
-          <Link href="/dashboard" className="button-ghost">
-            Самбар руу буцах
-          </Link>
-        </>
+        <Link href="/dashboard" className="button-secondary">
+          Самбар руу буцах
+        </Link>
       }
     >
       {params.error ? <FeedbackBanner tone="error" message={params.error} /> : null}
@@ -42,140 +40,114 @@ export default async function SettingsPage({ searchParams }: SettingsPageProps) 
         <FeedbackBanner tone="success" message={params.message} />
       ) : null}
 
-      <section className="grid-2">
+      <section className="dashboard-split-grid">
         <SectionCard
           title="Брэндийн мэдээлэл"
-          description="CTA, overlay, landing redirect дээр ашиглагдах үндсэн талбарууд."
+          description="Контентын outro болон эмнэлгийн contact хэсэгт ашиглагдах талбарууд."
         >
           <form className="field-grid" action={saveBrandSettingsAction}>
             <label>
-              <span className="field-label">Брэндийн нэр</span>
-              <input className="field" name="name" defaultValue={settings.brand.name} />
+              <span className="field-label">Эмнэлгийн нэр</span>
+              <input
+                className="field"
+                name="hospital_name"
+                defaultValue={settings.settings.hospital_name}
+                required
+              />
             </label>
             <label>
               <span className="field-label">Утас</span>
               <input
                 className="field"
                 name="phone"
-                defaultValue={settings.brand.phone ?? ""}
+                defaultValue={settings.settings.phone ?? ""}
               />
             </label>
             <label>
-              <span className="field-label">Website</span>
+              <span className="field-label">Вэбсайт</span>
               <input
                 className="field"
                 name="website"
-                defaultValue={settings.brand.website ?? ""}
+                defaultValue={settings.settings.website ?? ""}
               />
             </label>
             <label>
-              <span className="field-label">Facebook URL</span>
+              <span className="field-label">Facebook</span>
               <input
                 className="field"
-                name="facebookUrl"
-                defaultValue={settings.brand.facebook_url ?? ""}
+                name="facebook"
+                defaultValue={settings.settings.facebook ?? ""}
               />
             </label>
             <label>
               <span className="field-label">Хаяг</span>
               <textarea
                 className="textarea"
-                name="address"
-                defaultValue={settings.brand.address ?? ""}
+                name="address_mn"
+                defaultValue={settings.settings.address_mn ?? ""}
               />
             </label>
             <label>
-              <span className="field-label">Logo</span>
+              <span className="field-label">Logo файл</span>
               <input
                 className="field"
-                name="logoFile"
                 type="file"
+                name="logo_file"
                 accept="image/png,image/jpeg,image/webp,image/svg+xml"
               />
             </label>
             <label>
-              <span className="field-label">Frame PNG</span>
+              <span className="field-label">Frame файл</span>
               <input
                 className="field"
-                name="frameFile"
                 type="file"
+                name="frame_file"
                 accept="image/png,image/webp"
               />
             </label>
             <label>
-              <span className="field-label">Outro video</span>
+              <span className="field-label">Outro файл</span>
               <input
                 className="field"
-                name="outroFile"
                 type="file"
+                name="outro_file"
                 accept="video/mp4,video/quicktime"
               />
             </label>
             <div className="action-row">
               <button type="submit" className="button-primary">
-                Өөрчлөлт хадгалах
+                Тохиргоо хадгалах
               </button>
             </div>
           </form>
         </SectionCard>
 
         <SectionCard
-          title="Одоогийн asset preview"
-          description="Merge шатанд frame/outro-г optional ашиглана."
+          title="Asset preview"
+          description="Одоогоор хадгалагдсан logo, frame, outro файлууд."
         >
-          <div className="stack-sm">
-            <article className="table-row">
-              <div className="action-row" style={{ justifyContent: "space-between" }}>
-                <strong>Logo</strong>
-                <span className="badge">{settings.logoUrl ? "Бэлэн" : "Алга"}</span>
-              </div>
-              {settings.logoUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={settings.logoUrl}
-                  alt="Брэндийн logo"
-                  style={{ maxWidth: "100%", borderRadius: 18 }}
-                />
-              ) : (
-                <p className="muted-text">Logo хараахан upload хийгдээгүй байна.</p>
-              )}
-            </article>
-            <article className="table-row">
-              <div className="action-row" style={{ justifyContent: "space-between" }}>
-                <strong>Frame</strong>
-                <span className="badge">{settings.frameUrl ? "Бэлэн" : "Алга"}</span>
-              </div>
-              {settings.frameUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={settings.frameUrl}
-                  alt="Frame preview"
-                  style={{ maxWidth: "100%", borderRadius: 18 }}
-                />
-              ) : (
-                <p className="muted-text">Frame overlay upload хийгдээгүй байна.</p>
-              )}
-            </article>
-            <article className="table-row">
-              <div className="action-row" style={{ justifyContent: "space-between" }}>
-                <strong>Outro</strong>
-                <span className="badge">
-                  {settings.outroUrl ? "Бэлэн" : "Алга"}
-                </span>
-              </div>
-              {settings.outroUrl ? (
-                <video
-                  controls
-                  src={settings.outroUrl}
-                  style={{ width: "100%", borderRadius: 18 }}
-                />
-              ) : (
-                <p className="muted-text">Outro video upload хийгдээгүй байна.</p>
-              )}
-            </article>
+          <div className="asset-preview-grid">
+            <AssetPreview
+              title="Logo"
+              url={settings.logoSignedUrl}
+              kind="image"
+              emptyText="Logo файл хараахан upload хийгдээгүй байна."
+            />
+            <AssetPreview
+              title="Frame"
+              url={settings.frameSignedUrl}
+              kind="image"
+              emptyText="Frame файл хараахан upload хийгдээгүй байна."
+            />
+            <AssetPreview
+              title="Outro"
+              url={settings.outroSignedUrl}
+              kind="video"
+              emptyText="Outro файл хараахан upload хийгдээгүй байна."
+            />
           </div>
         </SectionCard>
       </section>
-    </PostlyShell>
+    </DashboardShell>
   );
 }

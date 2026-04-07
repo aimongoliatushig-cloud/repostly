@@ -1,16 +1,17 @@
 import Link from "next/link";
 
+import { DashboardShell } from "@/components/dashboard-shell";
 import { FeedbackBanner } from "@/components/feedback-banner";
-import { PostlyShell } from "@/components/postly-shell";
 import { SectionCard } from "@/components/section-card";
 import { requireBrandContext } from "@/lib/auth/context";
+import { getBrandSettings } from "@/lib/brands/service";
 import { listDoctors } from "@/lib/doctors/service";
 
 import {
-  archiveDoctorAction,
   createDoctorAction,
+  deleteDoctorAction,
   updateDoctorAction,
-} from "../actions";
+} from "./actions";
 
 type DoctorsPageProps = {
   searchParams: Promise<{
@@ -22,23 +23,21 @@ type DoctorsPageProps = {
 export default async function DoctorsPage({ searchParams }: DoctorsPageProps) {
   const params = await searchParams;
   const context = await requireBrandContext("/dashboard/doctors");
-  const doctors = await listDoctors(context.supabase, context.brand.id);
+  const [brandSettings, doctors] = await Promise.all([
+    getBrandSettings(context.supabase, context.brand.id),
+    listDoctors(context.supabase, context.brand.id),
+  ]);
 
   return (
-    <PostlyShell
+    <DashboardShell
       activePath="/dashboard/doctors"
-      eyebrow="Эмчийн сан"
-      title="Эмчийн сан ба мэргэжлийн удирдлага"
-      description="Brand context дотор эмч нэмэх, portrait upload хийх, мэдээлэл шинэчлэх, архивлах боломжтой."
+      hospitalName={brandSettings.settings.hospital_name}
+      title="Эмч нар"
+      description="Эмч нэмэх, үндсэн мэдээлэл шинэчлэх, portrait зураг хадгалах, avatar detail рүү орох удирдлага."
       actions={
-        <>
-          <Link href="/dashboard/broll" className="button-primary">
-            B-roll үүсгэх
-          </Link>
-          <Link href="/dashboard" className="button-ghost">
-            Самбар руу буцах
-          </Link>
-        </>
+        <Link href="/dashboard" className="button-secondary">
+          Самбар руу буцах
+        </Link>
       }
     >
       {params.error ? <FeedbackBanner tone="error" message={params.error} /> : null}
@@ -46,18 +45,18 @@ export default async function DoctorsPage({ searchParams }: DoctorsPageProps) {
         <FeedbackBanner tone="success" message={params.message} />
       ) : null}
 
-      <section className="grid-2">
+      <section className="dashboard-split-grid">
         <SectionCard
-          title="Шинэ эмч нэмэх"
-          description="Эмчийн нэр, мэргэжил, portrait зураг нэг дор хадгалагдана."
+          title="Эмч нэмэх"
+          description="Нэр, мэргэжил, portrait зурагтай шинэ эмч бүртгэнэ."
         >
           <form className="field-grid" action={createDoctorAction}>
             <label>
-              <span className="field-label">Эмчийн нэр</span>
+              <span className="field-label">Нэр</span>
               <input
                 className="field"
-                name="fullName"
-                placeholder="О. Наранцацрал"
+                name="name_mn"
+                placeholder="А. Нарангэрэл"
                 required
               />
             </label>
@@ -65,8 +64,8 @@ export default async function DoctorsPage({ searchParams }: DoctorsPageProps) {
               <span className="field-label">Мэргэжил</span>
               <input
                 className="field"
-                name="specialization"
-                placeholder="Уушгины эмч"
+                name="specialty_mn"
+                placeholder="Дүрс оношилгооны эмч"
                 required
               />
             </label>
@@ -74,8 +73,8 @@ export default async function DoctorsPage({ searchParams }: DoctorsPageProps) {
               <span className="field-label">Portrait зураг</span>
               <input
                 className="field"
-                name="imageFile"
                 type="file"
+                name="portrait_file"
                 accept="image/png,image/jpeg,image/webp"
               />
             </label>
@@ -88,22 +87,22 @@ export default async function DoctorsPage({ searchParams }: DoctorsPageProps) {
         </SectionCard>
 
         <SectionCard
-          title="Хэрэглээний note"
-          description="B-roll topic suggestion болон doctor picker дээр энэ санг ашиглана."
+          title="Товч заавар"
+          description="Doctor profile ба avatar системийн суурь логик."
         >
           <div className="stack-sm">
-            <article className="table-row">
-              <strong>Portrait чанар</strong>
+            <article className="mini-card stack-xs">
+              <strong>Portrait зураг</strong>
               <p className="muted-text">
-                Цэвэр background-тай зураг байх тусам doctor overlay илүү цэвэр
-                харагдана.
+                Эмчийн үндсэн танилцуулгын зураг. Detail хуудсан дээр avatar
+                зурагнуудаас тусдаа харагдана.
               </p>
             </article>
-            <article className="table-row">
-              <strong>Мэргэжлийн шошго</strong>
+            <article className="mini-card stack-xs">
+              <strong>Avatar зураг</strong>
               <p className="muted-text">
-                OpenAI planning prompt дээр specialization context хэлбэрээр
-                орно.
+                Doctor detail хуудсан дээр олон avatar зураг upload хийж,
+                нэгийг нь үндсэн болгож сонгоно.
               </p>
             </article>
           </div>
@@ -111,92 +110,102 @@ export default async function DoctorsPage({ searchParams }: DoctorsPageProps) {
       </section>
 
       <SectionCard
-        title="Одоогийн эмч нар"
-        description="Inline edit хийж, шаардлагагүй эмчийг архивлаж болно."
+        title="Эмчийн жагсаалт"
+        description="Inline edit хийж, дэлгэрэнгүй avatar management руу орж, шаардлагагүй эмчийг устгана."
       >
-        <div className="cards-grid">
-          {doctors.length === 0 ? (
-            <article className="table-row">
-              <p className="muted-text">Одоогоор эмч бүртгэгдээгүй байна.</p>
-            </article>
-          ) : (
-            doctors.map((doctor) => (
-              <article key={doctor.id} className="scene-card">
-                <div
-                  className="action-row"
-                  style={{ justifyContent: "space-between", alignItems: "flex-start" }}
-                >
-                  <div className="stack-xs">
-                    <span className="eyebrow">
-                      {doctor.is_active ? "Идэвхтэй" : "Архивласан"}
-                    </span>
-                    <strong>{doctor.full_name}</strong>
-                    <span className="muted-text">{doctor.specialization}</span>
-                  </div>
-                  {doctor.imageUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={doctor.imageUrl}
-                      alt={doctor.full_name}
-                      style={{
-                        width: 64,
-                        height: 64,
-                        objectFit: "cover",
-                        borderRadius: 18,
-                      }}
-                    />
-                  ) : null}
-                </div>
+        {doctors.length === 0 ? (
+          <div className="empty-state">
+            <p className="muted-text">Одоогоор эмч бүртгэгдээгүй байна.</p>
+          </div>
+        ) : (
+          <div className="doctor-grid">
+            {doctors.map((doctor) => {
+              const coverImage =
+                doctor.primaryAvatar?.imageSignedUrl ?? doctor.portraitSignedUrl;
 
-                <form className="field-grid" action={updateDoctorAction}>
-                  <input type="hidden" name="doctorId" value={doctor.id} />
-                  <label>
-                    <span className="field-label">Нэр</span>
-                    <input
-                      className="field"
-                      name="fullName"
-                      defaultValue={doctor.full_name}
-                      required
-                    />
-                  </label>
-                  <label>
-                    <span className="field-label">Мэргэжил</span>
-                    <input
-                      className="field"
-                      name="specialization"
-                      defaultValue={doctor.specialization}
-                      required
-                    />
-                  </label>
-                  <label>
-                    <span className="field-label">Шинэ зураг</span>
-                    <input
-                      className="field"
-                      name="imageFile"
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                    />
-                  </label>
-                  <div className="action-row">
-                    <button type="submit" className="button-secondary">
-                      Шинэчлэх
-                    </button>
+              return (
+                <article key={doctor.id} className="doctor-card">
+                  <div className="doctor-card-head">
+                    <div className="stack-xs">
+                      <span className="badge badge-accent">
+                        Avatar {doctor.avatarCount}
+                      </span>
+                      <strong>{doctor.name_mn}</strong>
+                      <span className="muted-text">{doctor.specialty_mn}</span>
+                    </div>
+                    {coverImage ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        className="doctor-thumb"
+                        src={coverImage}
+                        alt={doctor.name_mn}
+                      />
+                    ) : (
+                      <div className="doctor-thumb doctor-thumb-empty">
+                        Зураггүй
+                      </div>
+                    )}
                   </div>
-                </form>
 
-                {doctor.is_active ? (
-                  <form action={archiveDoctorAction}>
-                    <input type="hidden" name="doctorId" value={doctor.id} />
-                    <button type="submit" className="button-ghost">
-                      Архивлах
+                  <form className="field-grid" action={updateDoctorAction}>
+                    <input type="hidden" name="doctor_id" value={doctor.id} />
+                    <input
+                      type="hidden"
+                      name="returnTo"
+                      value="/dashboard/doctors"
+                    />
+                    <label>
+                      <span className="field-label">Нэр</span>
+                      <input
+                        className="field"
+                        name="name_mn"
+                        defaultValue={doctor.name_mn}
+                        required
+                      />
+                    </label>
+                    <label>
+                      <span className="field-label">Мэргэжил</span>
+                      <input
+                        className="field"
+                        name="specialty_mn"
+                        defaultValue={doctor.specialty_mn}
+                        required
+                      />
+                    </label>
+                    <label>
+                      <span className="field-label">Шинэ portrait</span>
+                      <input
+                        className="field"
+                        type="file"
+                        name="portrait_file"
+                        accept="image/png,image/jpeg,image/webp"
+                      />
+                    </label>
+                    <div className="action-row">
+                      <button type="submit" className="button-secondary">
+                        Шинэчлэх
+                      </button>
+                      <Link
+                        href={`/dashboard/doctors/${doctor.id}`}
+                        className="button-ghost"
+                      >
+                        Дэлгэрэнгүй
+                      </Link>
+                    </div>
+                  </form>
+
+                  <form action={deleteDoctorAction}>
+                    <input type="hidden" name="doctor_id" value={doctor.id} />
+                    <button type="submit" className="button-danger">
+                      Устгах
                     </button>
                   </form>
-                ) : null}
-              </article>
-            ))
-          )}
-        </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
       </SectionCard>
-    </PostlyShell>
+    </DashboardShell>
   );
 }

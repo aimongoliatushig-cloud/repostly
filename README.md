@@ -1,81 +1,155 @@
-# Postly AI
+# Hospital AI Content Generation System
 
-Монгол хэл дээр ажиллах, эмнэлэг болон агентуудад зориулсан AI reel production SaaS.
+Phase 1 суурь систем. Next.js App Router, TypeScript, Tailwind CSS v4, Supabase дээр ажиллана.
 
-## Одоо бодитоор ажиллаж буй зүйлс
+## Хийсэн зүйл
 
-- Supabase core schema, RLS, credit deduction function, brand bootstrap function
-- Supabase SSR auth, protected routing, current brand context resolution
-- Dashboard, doctors, brand settings, projects, B-roll, Organ Talk protected pages
-- Real doctors CRUD, brand settings persistence, storage upload flow
-- Real project draft creation, storyboard planning, scene editing, per-scene generation jobs
-- KIE polling + callback wiring
-- FFmpeg дээр суурилсан final merge pipeline
+- `/dashboard` хянах самбар
+- Sidebar navigation
+- `/dashboard/doctors` эмчийн CRUD
+- `/dashboard/doctors/[id]` avatar management
+- `/dashboard/settings` брэндийн тохиргоо
+- `/dashboard/topics` placeholder хуудас
+- Supabase migration, storage upload flow, Mongolian UI
 
-## Гол route-ууд
+## Route-ууд
 
-- `/auth`
-- `/dashboard`
-- `/dashboard/broll`
-- `/dashboard/organ`
-- `/dashboard/doctors`
-- `/dashboard/settings`
-- `/dashboard/projects`
-- `/dashboard/projects/[projectId]`
+- `src/app/dashboard/page.tsx`
+- `src/app/dashboard/doctors/page.tsx`
+- `src/app/dashboard/doctors/[id]/page.tsx`
+- `src/app/dashboard/settings/page.tsx`
+- `src/app/dashboard/topics/page.tsx`
 
-Legacy scaffold route-ууд redirect хийнэ:
+## Гол бүтэц
 
-- `/admin/doctors`
-- `/settings/brand`
-- `/videos/new/broll`
-- `/videos/new/organ-talk`
+- `src/components/dashboard-shell.tsx`
+- `src/components/dashboard-metric-card.tsx`
+- `src/components/asset-preview.tsx`
+- `src/lib/doctors/service.ts`
+- `src/lib/brands/service.ts`
+- `src/lib/dashboard/service.ts`
+- `src/lib/storage/service.ts`
+- `src/lib/supabase/database.types.ts`
+- `src/types/hospital.ts`
+- `supabase/migrations/20260407173000_hospital_phase1.sql`
 
-## Supabase migration-ууд
+## Supabase schema
 
-- `supabase/migrations/20260403194000_postly_core.sql`
-- `supabase/migrations/20260403223000_postly_bootstrap_and_storage.sql`
-- `supabase/migrations/20260403234500_postly_kie_callback.sql`
+Phase 1 дээр дараах хүснэгтүүд ашиглагдана:
 
-## Environment variables
+- `doctors`
+  - `id`
+  - `name_mn`
+  - `specialty_mn`
+  - `portrait_url`
+  - `created_at`
+- `avatars`
+  - `id`
+  - `doctor_id`
+  - `image_url`
+  - `is_primary`
+  - `created_at`
+- `brand_settings`
+  - `id`
+  - `hospital_name`
+  - `logo_url`
+  - `frame_url`
+  - `outro_url`
+  - `phone`
+  - `website`
+  - `facebook`
+  - `address_mn`
 
-`.env.local` файлд дор хаяж:
+Тэмдэглэл:
+
+- Repo дээр өмнөх multi-tenant `brands` schema хэвээр байгаа.
+- `brand_settings.id` нь `brands.id`-тай 1:1 холбоотой.
+- `doctors` хүснэгт дээр хуучин `full_name`, `specialization`, `image_path` талбарууд compatibility зорилгоор хадгалагдсан.
+
+## Storage
+
+Supabase storage bucket: `postly-private`
+
+Ашиглагдах folder-ууд:
+
+- `brands/<brand-id>/doctors/portrait/*`
+- `brands/<brand-id>/doctors/avatar/*`
+- `brands/<brand-id>/brand/logo/*`
+- `brands/<brand-id>/brand/frame/*`
+- `brands/<brand-id>/brand/outro/*`
+
+## Environment
+
+`.env.local` файлд доорх утгуудыг оруулна:
 
 ```bash
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_DEFAULT_KEY=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 APP_URL=http://localhost:3000
+```
+
+Дараагийн шатны workflow-д хэрэг болох optional хувьсагчууд:
+
+```bash
 OPENAI_API_KEY=
 OPENAI_MODEL_SCRIPT=gpt-4.1-mini
 KIE_API_KEY=
 KIE_API_BASE_URL=https://api.kie.ai
 KIE_CALLBACK_SECRET=
-SUPABASE_SERVICE_ROLE_KEY=
 ```
-
-Тайлбар:
-
-- `OPENAI_API_KEY` байхгүй бол storyboard planning template fallback руу орно.
-- `KIE_API_KEY` байхгүй бол scene generation failed state-ээр бууна, mock success хийхгүй.
-- `APP_URL` нь KIE callback URL үүсгэхэд хэрэглэгдэнэ.
-- `SUPABASE_SERVICE_ROLE_KEY` одоогийн кодын үндсэн урсгалд заавал биш, гэхдээ цаашдын worker/background automation-д ашигтай.
 
 ## Ажиллуулах
 
+### 1. Dependency суулгах
+
 ```bash
 npm install
+```
+
+### 2. Supabase migration ажиллуулах
+
+Local Supabase ашиглаж байгаа бол:
+
+```bash
+npx supabase start
+npx supabase db reset
+```
+
+Cloud project руу холбоод push хийх бол:
+
+```bash
+npx supabase link --project-ref <project-ref>
+npx supabase db push
+```
+
+### 3. Next.js app асаах
+
+```bash
 npm run dev
 ```
 
-Шалгах:
+App: [http://localhost:3000](http://localhost:3000)
+
+## Шалгах команд
 
 ```bash
-npm run lint
 npm run typecheck
+npm run lint
 npm run build
 ```
 
-## Нэмэлт note
+## Phase 1 UI урсгал
 
-- Scene clip generation нь KIE Runway endpoint дээр суурилсан.
-- Final merge нь local `ffmpeg` ашиглана.
-- Credit deduction зөвхөн final merge амжилттай дууссаны дараа `consume_video_credit()` RPC-ээр хийгдэнэ.
+1. Dashboard дээр нийт эмч, placeholder төслүүд, сүүлийн нэмсэн эмч харагдана.
+2. Doctors хуудсан дээр эмч нэмнэ, жагсаалтыг харна, edit/delete хийнэ.
+3. Doctor detail хуудсан дээр avatar зураг upload хийнэ, primary avatar сонгоно.
+4. Settings хуудсан дээр logo, frame, outro болон contact мэдээллийг хадгална.
+
+## Тайлбар
+
+- UI нь Монгол хэл дээр хийгдсэн.
+- Doctor/avatar/brand asset upload бүх урсгал Supabase Storage ашиглана.
+- Sidebar navigation зөвхөн Phase 1 хэсгүүдийг харуулна.

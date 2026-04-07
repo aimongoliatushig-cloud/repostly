@@ -125,6 +125,47 @@ export type Database = {
           updated_at?: string;
         }
       >;
+      brand_settings: TableDefinition<
+        {
+          id: string;
+          hospital_name: string;
+          logo_url: string | null;
+          frame_url: string | null;
+          outro_url: string | null;
+          phone: string | null;
+          website: string | null;
+          facebook: string | null;
+          address_mn: string | null;
+          created_at: string;
+          updated_at: string;
+        },
+        {
+          id: string;
+          hospital_name: string;
+          logo_url?: string | null;
+          frame_url?: string | null;
+          outro_url?: string | null;
+          phone?: string | null;
+          website?: string | null;
+          facebook?: string | null;
+          address_mn?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        },
+        {
+          id?: string;
+          hospital_name?: string;
+          logo_url?: string | null;
+          frame_url?: string | null;
+          outro_url?: string | null;
+          phone?: string | null;
+          website?: string | null;
+          facebook?: string | null;
+          address_mn?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        }
+      >;
       brand_memberships: TableDefinition<
         {
           brand_id: string;
@@ -289,6 +330,9 @@ export type Database = {
         {
           id: string;
           brand_id: string;
+          name_mn: string;
+          specialty_mn: string;
+          portrait_url: string | null;
           full_name: string;
           specialization: string;
           image_path: string | null;
@@ -300,6 +344,9 @@ export type Database = {
         {
           id?: string;
           brand_id: string;
+          name_mn?: string;
+          specialty_mn?: string;
+          portrait_url?: string | null;
           full_name: string;
           specialization: string;
           image_path?: string | null;
@@ -311,6 +358,9 @@ export type Database = {
         {
           id?: string;
           brand_id?: string;
+          name_mn?: string;
+          specialty_mn?: string;
+          portrait_url?: string | null;
           full_name?: string;
           specialization?: string;
           image_path?: string | null;
@@ -318,6 +368,29 @@ export type Database = {
           created_by?: string | null;
           created_at?: string;
           updated_at?: string;
+        }
+      >;
+      avatars: TableDefinition<
+        {
+          id: string;
+          doctor_id: string;
+          image_url: string;
+          is_primary: boolean;
+          created_at: string;
+        },
+        {
+          id?: string;
+          doctor_id: string;
+          image_url: string;
+          is_primary?: boolean;
+          created_at?: string;
+        },
+        {
+          id?: string;
+          doctor_id?: string;
+          image_url?: string;
+          is_primary?: boolean;
+          created_at?: string;
         }
       >;
       brand_assets: TableDefinition<

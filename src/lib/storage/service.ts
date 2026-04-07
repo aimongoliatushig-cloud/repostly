@@ -8,6 +8,7 @@ export const STORAGE_BUCKET = "postly-private";
 
 type UploadKind =
   | "doctor-image"
+  | "avatar-image"
   | "brand-logo"
   | "brand-frame"
   | "brand-outro"
@@ -25,7 +26,12 @@ const uploadRules: Record<
   "doctor-image": {
     maxBytes: 5 * 1024 * 1024,
     mimeTypes: ["image/png", "image/jpeg", "image/webp"],
-    folder: "doctors",
+    folder: "doctors/portrait",
+  },
+  "avatar-image": {
+    maxBytes: 8 * 1024 * 1024,
+    mimeTypes: ["image/png", "image/jpeg", "image/webp"],
+    folder: "doctors/avatar",
   },
   "brand-logo": {
     maxBytes: 5 * 1024 * 1024,

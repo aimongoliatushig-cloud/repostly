@@ -3,11 +3,15 @@ import { NextResponse } from "next/server";
 import { getCurrentBrandContext } from "@/lib/auth/context";
 import { parseRequestData } from "@/lib/http/request";
 import {
-  archiveDoctor,
   createDoctor,
+  deleteDoctor,
   listDoctors,
   updateDoctor,
 } from "@/lib/doctors/service";
+
+function getString(body: Record<string, unknown>, key: string) {
+  return String(body[key] ?? "").trim();
+}
 
 export async function GET() {
   const context = await getCurrentBrandContext();
@@ -32,12 +36,13 @@ export async function POST(request: Request) {
   }
 
   const body = await parseRequestData(request);
-  const fullName = String(body.fullName ?? "").trim();
-  const specialization = String(body.specialization ?? "").trim();
+  const nameMn = getString(body, "name_mn") || getString(body, "fullName");
+  const specialtyMn =
+    getString(body, "specialty_mn") || getString(body, "specialization");
 
-  if (!fullName || !specialization) {
+  if (!nameMn || !specialtyMn) {
     return NextResponse.json(
-      { error: "Эмчийн нэр болон мэргэжлийг бүрэн оруулна уу." },
+      { error: "Эмчийн нэр, мэргэжлийг бүрэн оруулна уу." },
       { status: 400 },
     );
   }
@@ -45,8 +50,8 @@ export async function POST(request: Request) {
   await createDoctor(context.supabase, {
     brandId: context.brand.id,
     userId: context.user.id,
-    fullName,
-    specialization,
+    nameMn,
+    specialtyMn,
   });
 
   const items = await listDoctors(context.supabase, context.brand.id);
@@ -68,21 +73,25 @@ export async function PATCH(request: Request) {
   }
 
   const body = await parseRequestData(request);
-  const doctorId = String(body.doctorId ?? "").trim();
-  const action = String(body.action ?? "update").trim();
+  const doctorId = getString(body, "doctor_id") || getString(body, "doctorId");
+  const action = getString(body, "action") || "update";
 
   if (!doctorId) {
-    return NextResponse.json({ error: "doctorId шаардлагатай." }, { status: 400 });
+    return NextResponse.json({ error: "doctor_id шаардлагатай." }, { status: 400 });
   }
 
-  if (action === "archive") {
-    await archiveDoctor(context.supabase, doctorId);
+  if (action === "delete") {
+    await deleteDoctor(context.supabase, {
+      brandId: context.brand.id,
+      doctorId,
+    });
   } else {
     await updateDoctor(context.supabase, {
       doctorId,
       brandId: context.brand.id,
-      fullName: String(body.fullName ?? "").trim(),
-      specialization: String(body.specialization ?? "").trim(),
+      nameMn: getString(body, "name_mn") || getString(body, "fullName"),
+      specialtyMn:
+        getString(body, "specialty_mn") || getString(body, "specialization"),
     });
   }
 

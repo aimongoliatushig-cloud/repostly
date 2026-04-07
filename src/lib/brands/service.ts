@@ -7,13 +7,13 @@ import type {
   TableRow,
   TableUpdate,
 } from "@/lib/supabase/database.types";
+import type { BrandSettingsView as HospitalBrandSettingsView } from "@/types/hospital";
 
 type SubscriptionWithPlan = TableRow<"brand_subscriptions"> & {
   subscription_plans: TableRow<"subscription_plans"> | null;
 };
 
-export type BrandSettingsView = {
-  brand: TableRow<"brands">;
+export type BrandSettingsView = HospitalBrandSettingsView & {
   logoUrl: string | null;
   frameUrl: string | null;
   outroUrl: string | null;
@@ -91,11 +91,52 @@ export async function listCreditLedger(
   return data ?? [];
 }
 
+async function ensureBrandSettingsRow(
+  supabase: SupabaseClient<Database>,
+  brand: TableRow<"brands">,
+) {
+  const { data, error } = await supabase
+    .from("brand_settings")
+    .select("*")
+    .eq("id", brand.id)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  if (data) {
+    return data;
+  }
+
+  const { data: inserted, error: insertError } = await supabase
+    .from("brand_settings")
+    .insert({
+      id: brand.id,
+      hospital_name: brand.name,
+      logo_url: brand.logo_path,
+      frame_url: brand.frame_path,
+      outro_url: brand.outro_video_path,
+      phone: brand.phone,
+      website: brand.website,
+      facebook: brand.facebook_url,
+      address_mn: brand.address,
+    })
+    .select("*")
+    .single();
+
+  if (insertError) {
+    throw insertError;
+  }
+
+  return inserted;
+}
+
 export async function getBrandSettings(
   supabase: SupabaseClient<Database>,
   brandId: string,
 ) {
-  const { data, error } = await supabase
+  const { data: brand, error } = await supabase
     .from("brands")
     .select("*")
     .eq("id", brandId)
@@ -105,17 +146,31 @@ export async function getBrandSettings(
     throw error;
   }
 
-  const [logoUrl, frameUrl, outroUrl] = await Promise.all([
-    createSignedAssetUrl(supabase, data.logo_path),
-    createSignedAssetUrl(supabase, data.frame_path),
-    createSignedAssetUrl(supabase, data.outro_video_path),
+  const settings = await ensureBrandSettingsRow(supabase, brand);
+  const [logoSignedUrl, frameSignedUrl, outroSignedUrl] = await Promise.all([
+    createSignedAssetUrl(
+      supabase,
+      settings.logo_url ?? brand.logo_path ?? null,
+    ),
+    createSignedAssetUrl(
+      supabase,
+      settings.frame_url ?? brand.frame_path ?? null,
+    ),
+    createSignedAssetUrl(
+      supabase,
+      settings.outro_url ?? brand.outro_video_path ?? null,
+    ),
   ]);
 
   return {
-    brand: data as TableRow<"brands">,
-    logoUrl,
-    frameUrl,
-    outroUrl,
+    brand,
+    settings,
+    logoSignedUrl,
+    frameSignedUrl,
+    outroSignedUrl,
+    logoUrl: logoSignedUrl,
+    frameUrl: frameSignedUrl,
+    outroUrl: outroSignedUrl,
   } satisfies BrandSettingsView;
 }
 
@@ -135,22 +190,43 @@ export async function saveBrandSettings(
   input: {
     brandId: string;
     userId: string;
-    name: string;
+    hospitalName?: string;
+    name?: string;
     phone?: string | null;
     website?: string | null;
+    facebook?: string | null;
     facebookUrl?: string | null;
+    addressMn?: string | null;
     address?: string | null;
     logoFile?: File | null;
     frameFile?: File | null;
     outroFile?: File | null;
   },
 ) {
-  const updates: TableUpdate<"brands"> = {
-    name: input.name.trim(),
+  const hospitalName = (input.hospitalName ?? input.name ?? "").trim();
+
+  if (!hospitalName) {
+    throw new Error("Эмнэлгийн нэр хоосон байж болохгүй.");
+  }
+
+  const facebook = input.facebook?.trim() || input.facebookUrl?.trim() || null;
+  const addressMn = input.addressMn?.trim() || input.address?.trim() || null;
+
+  const brandUpdates: TableUpdate<"brands"> = {
+    name: hospitalName,
     phone: input.phone?.trim() || null,
     website: input.website?.trim() || null,
-    facebook_url: input.facebookUrl?.trim() || null,
-    address: input.address?.trim() || null,
+    facebook_url: facebook,
+    address: addressMn,
+  };
+
+  const brandSettingsUpdates: TableInsert<"brand_settings"> = {
+    id: input.brandId,
+    hospital_name: hospitalName,
+    phone: input.phone?.trim() || null,
+    website: input.website?.trim() || null,
+    facebook,
+    address_mn: addressMn,
   };
 
   if (input.logoFile && input.logoFile.size > 0) {
@@ -160,7 +236,8 @@ export async function saveBrandSettings(
       "brand-logo",
       input.logoFile,
     );
-    updates.logo_path = logoPath;
+    brandUpdates.logo_path = logoPath;
+    brandSettingsUpdates.logo_url = logoPath;
     await upsertBrandAsset(supabase, {
       brand_id: input.brandId,
       asset_type: "logo",
@@ -177,7 +254,8 @@ export async function saveBrandSettings(
       "brand-frame",
       input.frameFile,
     );
-    updates.frame_path = framePath;
+    brandUpdates.frame_path = framePath;
+    brandSettingsUpdates.frame_url = framePath;
     await upsertBrandAsset(supabase, {
       brand_id: input.brandId,
       asset_type: "frame",
@@ -194,7 +272,8 @@ export async function saveBrandSettings(
       "brand-outro",
       input.outroFile,
     );
-    updates.outro_video_path = outroPath;
+    brandUpdates.outro_video_path = outroPath;
+    brandSettingsUpdates.outro_url = outroPath;
     await upsertBrandAsset(supabase, {
       brand_id: input.brandId,
       asset_type: "outro",
@@ -204,12 +283,20 @@ export async function saveBrandSettings(
     });
   }
 
-  const { error } = await supabase
+  const { error: brandError } = await supabase
     .from("brands")
-    .update(updates)
+    .update(brandUpdates)
     .eq("id", input.brandId);
 
-  if (error) {
-    throw error;
+  if (brandError) {
+    throw brandError;
+  }
+
+  const { error: settingsError } = await supabase
+    .from("brand_settings")
+    .upsert(brandSettingsUpdates);
+
+  if (settingsError) {
+    throw settingsError;
   }
 }
