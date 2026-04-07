@@ -16,7 +16,9 @@ export default async function ProjectDetailPage({
 }: ProjectDetailPageProps) {
   const { projectId } = await params;
   const context = await requireBrandContext(`/dashboard/projects/${projectId}`);
-  const settings = await getBrandSettings(context.supabase, context.brand.id);
+  const settings = await getBrandSettings(context.supabase, context.brand.id, {
+    includeSignedUrls: false,
+  });
 
   return (
     <DashboardShell

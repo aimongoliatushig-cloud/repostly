@@ -162,3 +162,57 @@ export async function createSignedAssetUrl(
 
   return data.signedUrl;
 }
+
+export async function createSignedAssetUrls(
+  supabase: SupabaseClient<Database>,
+  pathsOrUrls: Array<string | null | undefined>,
+  expiresIn = 60 * 60,
+) {
+  if (pathsOrUrls.length === 0) {
+    return [] as Array<string | null>;
+  }
+
+  const directValues = new Map<number, string | null>();
+  const storageItems: Array<{ index: number; path: string }> = [];
+
+  pathsOrUrls.forEach((value, index) => {
+    if (!value) {
+      directValues.set(index, null);
+      return;
+    }
+
+    if (/^https?:\/\//i.test(value)) {
+      directValues.set(index, value);
+      return;
+    }
+
+    storageItems.push({ index, path: value });
+  });
+
+  const signedResults = new Map<number, string | null>();
+
+  if (storageItems.length > 0) {
+    const { data, error } = await supabase.storage
+      .from(STORAGE_BUCKET)
+      .createSignedUrls(
+        storageItems.map((item) => item.path),
+        expiresIn,
+      );
+
+    if (error) {
+      throw error;
+    }
+
+    data.forEach((item, index) => {
+      signedResults.set(storageItems[index].index, item.signedUrl);
+    });
+  }
+
+  return pathsOrUrls.map((_, index) => {
+    if (directValues.has(index)) {
+      return directValues.get(index) ?? null;
+    }
+
+    return signedResults.get(index) ?? null;
+  });
+}

@@ -160,6 +160,9 @@ async function ensureBrandSettingsRow(
 export async function getBrandSettings(
   supabase: SupabaseClient<Database>,
   brandId: string,
+  options?: {
+    includeSignedUrls?: boolean;
+  },
 ) {
   const { data: brand, error } = await supabase
     .from("brands")
@@ -172,20 +175,23 @@ export async function getBrandSettings(
   }
 
   const settings = await ensureBrandSettingsRow(supabase, brand);
-  const [logoSignedUrl, frameSignedUrl, outroSignedUrl] = await Promise.all([
-    createSignedAssetUrl(
-      supabase,
-      settings.logo_url ?? brand.logo_path ?? null,
-    ),
-    createSignedAssetUrl(
-      supabase,
-      settings.frame_url ?? brand.frame_path ?? null,
-    ),
-    createSignedAssetUrl(
-      supabase,
-      settings.outro_url ?? brand.outro_video_path ?? null,
-    ),
-  ]);
+  const shouldIncludeSignedUrls = options?.includeSignedUrls ?? true;
+  const [logoSignedUrl, frameSignedUrl, outroSignedUrl] = shouldIncludeSignedUrls
+    ? await Promise.all([
+        createSignedAssetUrl(
+          supabase,
+          settings.logo_url ?? brand.logo_path ?? null,
+        ),
+        createSignedAssetUrl(
+          supabase,
+          settings.frame_url ?? brand.frame_path ?? null,
+        ),
+        createSignedAssetUrl(
+          supabase,
+          settings.outro_url ?? brand.outro_video_path ?? null,
+        ),
+      ])
+    : [null, null, null];
 
   return {
     brand,

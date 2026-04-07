@@ -20,7 +20,9 @@ export default async function DashboardPage({
 }: DashboardPageProps) {
   const params = await searchParams;
   const context = await requireBrandContext("/dashboard");
-  const brandSettings = await getBrandSettings(context.supabase, context.brand.id);
+  const brandSettings = await getBrandSettings(context.supabase, context.brand.id, {
+    includeSignedUrls: false,
+  });
   const summary = await getDashboardSummary(context.supabase, {
     brandId: context.brand.id,
     hospitalName: brandSettings.settings.hospital_name,

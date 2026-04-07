@@ -1,6 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { createSignedAssetUrl, uploadBrandFile } from "@/lib/storage/service";
+import {
+  createSignedAssetUrl,
+  createSignedAssetUrls,
+  uploadBrandFile,
+} from "@/lib/storage/service";
 import type {
   Database,
   TableInsert,
@@ -46,8 +50,9 @@ async function signAvatarRows(
   supabase: SupabaseClient<Database>,
   avatars: TableRow<"avatars">[],
 ) {
-  const signedUrls = await Promise.all(
-    avatars.map((avatar) => createSignedAssetUrl(supabase, avatar.image_url)),
+  const signedUrls = await createSignedAssetUrls(
+    supabase,
+    avatars.map((avatar) => avatar.image_url),
   );
 
   return avatars.map((avatar, index) => ({
@@ -56,12 +61,12 @@ async function signAvatarRows(
   })) satisfies AvatarView[];
 }
 
-async function getDoctorAvatarsByDoctorIds(
+async function getDoctorAvatarRowsByDoctorIds(
   supabase: SupabaseClient<Database>,
   doctorIds: string[],
 ) {
   if (doctorIds.length === 0) {
-    return new Map<string, AvatarView[]>();
+    return new Map<string, TableRow<"avatars">[]>();
   }
 
   const { data, error } = await supabase
@@ -72,16 +77,15 @@ async function getDoctorAvatarsByDoctorIds(
 
   if (error) {
     if (isMissingRelationError(error, "avatars")) {
-      return new Map<string, AvatarView[]>();
+      return new Map<string, TableRow<"avatars">[]>();
     }
 
     throw error;
   }
 
-  const avatarViews = await signAvatarRows(supabase, data ?? []);
-  const grouped = new Map<string, AvatarView[]>();
+  const grouped = new Map<string, TableRow<"avatars">[]>();
 
-  avatarViews.forEach((avatar) => {
+  (data ?? []).forEach((avatar) => {
     const current = grouped.get(avatar.doctor_id) ?? [];
     current.push(avatar);
     grouped.set(avatar.doctor_id, current);
@@ -95,29 +99,44 @@ async function mapDoctorListItems(
   doctors: TableRow<"doctors">[],
 ) {
   const normalizedDoctors = doctors.map(normalizeDoctorRow);
-  const [avatarMap, portraitUrls] = await Promise.all([
-    getDoctorAvatarsByDoctorIds(
+  const [avatarRowsMap, portraitUrls] = await Promise.all([
+    getDoctorAvatarRowsByDoctorIds(
       supabase,
       normalizedDoctors.map((doctor) => doctor.id),
     ),
-    Promise.all(
-      normalizedDoctors.map((doctor) =>
-        createSignedAssetUrl(
-          supabase,
-          doctor.portrait_url ?? doctor.image_path ?? null,
-        ),
+    createSignedAssetUrls(
+      supabase,
+      normalizedDoctors.map(
+        (doctor) => doctor.portrait_url ?? doctor.image_path ?? null,
       ),
     ),
   ]);
 
+  const primaryAvatarRows = normalizedDoctors.map((doctor) => {
+    const avatarRows = avatarRowsMap.get(doctor.id) ?? [];
+    return avatarRows.find((avatar) => avatar.is_primary) ?? null;
+  });
+
+  const primaryAvatarUrls = await createSignedAssetUrls(
+    supabase,
+    primaryAvatarRows.map((avatar) => avatar?.image_url ?? null),
+  );
+
   return normalizedDoctors.map((doctor, index) => {
-    const avatars = avatarMap.get(doctor.id) ?? [];
-    const primaryAvatar = avatars.find((avatar) => avatar.is_primary) ?? null;
+    const avatarRows = avatarRowsMap.get(doctor.id) ?? [];
+    const primaryAvatarRow = primaryAvatarRows[index];
+    const primaryAvatar =
+      primaryAvatarRow && primaryAvatarUrls[index]
+        ? ({
+            ...primaryAvatarRow,
+            imageSignedUrl: primaryAvatarUrls[index],
+          } satisfies AvatarView)
+        : null;
 
     return {
       ...doctor,
       portraitSignedUrl: portraitUrls[index],
-      avatarCount: avatars.length,
+      avatarCount: avatarRows.length,
       primaryAvatar,
     };
   }) satisfies DoctorListItem[];
@@ -147,6 +166,49 @@ export async function listDoctors(
   }
 
   return mapDoctorListItems(supabase, data ?? []);
+}
+
+export async function countDoctors(
+  supabase: SupabaseClient<Database>,
+  brandId: string,
+) {
+  const { count, error } = await supabase
+    .from("doctors")
+    .select("*", { count: "exact", head: true })
+    .eq("brand_id", brandId)
+    .eq("is_active", true);
+
+  if (error) {
+    throw error;
+  }
+
+  return count ?? 0;
+}
+
+export async function getLatestDoctor(
+  supabase: SupabaseClient<Database>,
+  brandId: string,
+) {
+  const { data, error } = await supabase
+    .from("doctors")
+    .select("*")
+    .eq("brand_id", brandId)
+    .eq("is_active", true)
+    .order("created_at", { ascending: false })
+    .limit(1);
+
+  if (error) {
+    throw error;
+  }
+
+  const item = (data ?? [])[0];
+
+  if (!item) {
+    return null;
+  }
+
+  const mapped = await mapDoctorListItems(supabase, [item]);
+  return mapped[0] ?? null;
 }
 
 export async function getDoctorDetail(

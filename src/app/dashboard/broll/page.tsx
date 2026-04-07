@@ -7,7 +7,9 @@ import { getBrandSettings } from "@/lib/brands/service";
 
 export default async function BrollPage() {
   const context = await requireBrandContext("/dashboard/broll");
-  const settings = await getBrandSettings(context.supabase, context.brand.id);
+  const settings = await getBrandSettings(context.supabase, context.brand.id, {
+    includeSignedUrls: false,
+  });
 
   return (
     <DashboardShell

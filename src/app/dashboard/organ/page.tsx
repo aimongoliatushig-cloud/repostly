@@ -7,7 +7,9 @@ import { getBrandSettings } from "@/lib/brands/service";
 
 export default async function OrganPage() {
   const context = await requireBrandContext("/dashboard/organ");
-  const settings = await getBrandSettings(context.supabase, context.brand.id);
+  const settings = await getBrandSettings(context.supabase, context.brand.id, {
+    includeSignedUrls: false,
+  });
 
   return (
     <DashboardShell

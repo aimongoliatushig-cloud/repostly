@@ -38,7 +38,9 @@ export default async function DoctorDetailPage({
     doctorId: routeParams.id,
   }).catch(() => notFound());
 
-  const brandSettings = await getBrandSettings(context.supabase, context.brand.id);
+  const brandSettings = await getBrandSettings(context.supabase, context.brand.id, {
+    includeSignedUrls: false,
+  });
 
   return (
     <DashboardShell

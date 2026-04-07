@@ -1,6 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-import { listDoctors } from "@/lib/doctors/service";
+import { countDoctors, getLatestDoctor } from "@/lib/doctors/service";
 import type { Database } from "@/lib/supabase/database.types";
 import type { HospitalDashboardSummary } from "@/types/hospital";
 
@@ -11,12 +11,15 @@ export async function getDashboardSummary(
     hospitalName: string;
   },
 ) {
-  const doctors = await listDoctors(supabase, input.brandId);
+  const [totalDoctors, recentDoctor] = await Promise.all([
+    countDoctors(supabase, input.brandId),
+    getLatestDoctor(supabase, input.brandId),
+  ]);
 
   return {
-    totalDoctors: doctors.length,
+    totalDoctors,
     activeProjects: 0,
-    recentDoctor: doctors[0] ?? null,
+    recentDoctor,
     hospitalName: input.hospitalName,
   } satisfies HospitalDashboardSummary;
 }

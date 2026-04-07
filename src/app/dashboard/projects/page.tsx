@@ -7,7 +7,9 @@ import { getBrandSettings } from "@/lib/brands/service";
 
 export default async function ProjectsPage() {
   const context = await requireBrandContext("/dashboard/projects");
-  const settings = await getBrandSettings(context.supabase, context.brand.id);
+  const settings = await getBrandSettings(context.supabase, context.brand.id, {
+    includeSignedUrls: false,
+  });
 
   return (
     <DashboardShell

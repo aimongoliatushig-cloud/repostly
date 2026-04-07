@@ -24,7 +24,9 @@ export default async function DoctorsPage({ searchParams }: DoctorsPageProps) {
   const params = await searchParams;
   const context = await requireBrandContext("/dashboard/doctors");
   const [brandSettings, doctors] = await Promise.all([
-    getBrandSettings(context.supabase, context.brand.id),
+    getBrandSettings(context.supabase, context.brand.id, {
+      includeSignedUrls: false,
+    }),
     listDoctors(context.supabase, context.brand.id),
   ]);
 
