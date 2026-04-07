@@ -10,6 +10,7 @@ Phase 1 суурь систем. Next.js App Router, TypeScript, Tailwind CSS v4
 - `/dashboard/doctors/[id]` avatar management
 - `/dashboard/settings` брэндийн тохиргоо
 - `/dashboard/topics` placeholder хуудас
+- `/dashboard/broll`, `/dashboard/organ`, `/dashboard/projects` түр идэвхгүй placeholder
 - Supabase migration, storage upload flow, Mongolian UI
 
 ## Route-ууд
@@ -77,6 +78,16 @@ Supabase storage bucket: `postly-private`
 - `brands/<brand-id>/brand/logo/*`
 - `brands/<brand-id>/brand/frame/*`
 - `brands/<brand-id>/brand/outro/*`
+
+Phase 1 дээр UI болон API түвшинд идэвхтэй хадгалалт:
+
+- эмчийн portrait зураг
+- эмчийн avatar зураг
+- logo
+- frame
+- outro
+
+Phase 2 project generation route/API-ууд одоогоор `410` буцаана.
 
 ## Environment
 
